@@ -28,6 +28,7 @@ sudo openssl req -x509 -nodes -newkey rsa:2048 \
   -subj "/CN=localhost"
 
 ```
+- Next Command Will take a lot of time if you are running this first time - alot and a alot of time
 8) Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
 9) Dittofeed needs to setup your org
 ```
