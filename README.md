@@ -9,6 +9,35 @@
 
 ---
 
+Fork: https://github.com/dittofeed/dittofeed
+
+This fork of dittofeed sets up NGINX on port 80 & 443. It handles the SSL Certs also. Just follow these steps:
+1) `git clone https://github.com/navdeeshahuja/dittofeed.git`
+2) `cd dittofeed`
+3) Run `htpasswd -c nginx/.htpasswd admin #password`. Enter password. This will be used as NGINX BASIC auth.
+4) Edit `nginx/certbot.sh` <-- Add your domain (&& EMAILID) that you want this to be hosted on
+5) Edit `nginx/conf.d/default.conf` <-- Add your domain
+6) Run `sudo mkdir -p nginx/certs/live/yourdomain.com`
+7) NGINX on first boot needs dummy certs. Create dummy certs.
+```
+sudo openssl req -x509 -nodes -newkey rsa:2048 \
+  -days 1 \
+  -keyout nginx/certs/live/yourdomain.com/privkey.pem \
+  -out nginx/certs/live/yourdomain.com/fullchain.pem \
+  -subj "/CN=localhost"
+
+```
+8) Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
+9) Dittofeed needs to setup your org
+```
+sudo docker compose run --rm admin-cli bash
+ > ./admin.sh bootstrap
+```
+10) `Go to yourdomain.com and see the magic 🚀`
+
+
+---
+
 <h2 align="center">Open-source customer engagement</h3>
 
 <p align="center">
