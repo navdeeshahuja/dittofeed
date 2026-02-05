@@ -2,9 +2,10 @@ version: "3.9"
 x-clickhouse-credentials: &clickhouse-credentials
   CLICKHOUSE_USER: dittofeed
   CLICKHOUSE_PASSWORD: password
+  CLICKHOUSE_LOG_LEVEL: error
 x-backend-app-env: &backend-app-env
   <<: *clickhouse-credentials
-  NODE_ENV: development
+  NODE_ENV: production
   DATABASE_URL: "postgresql://postgres:password@postgres:5432/dittofeed?connect_timeout=60"
   KAFKA_BROKERS: "kafka:29092"
   KAFKA_USERNAME: "admin"
@@ -13,7 +14,8 @@ x-backend-app-env: &backend-app-env
   CLICKHOUSE_HOST: "http://clickhouse-server:8123"
   TEMPORAL_ADDRESS: "temporal:7233"
   API_HOST: "0.0.0.0"
-  LOG_CONFIG: true
+  LOG_LEVEL: error
+  LOG_CONFIG: false
 services:
   dashboard:
     build:
@@ -33,6 +35,11 @@ services:
       <<: *backend-app-env
     networks:
       - dittofeed-network-dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   api:
     build:
       context: .
@@ -51,6 +58,11 @@ services:
       BOOTSTRAP_EVENTS: true
     networks:
       - dittofeed-network-dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   worker:
     build:
       context: .
@@ -121,6 +133,7 @@ services:
       - POSTGRES_PWD=password
       - POSTGRES_SEEDS=postgres
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/dev.yaml
+      - LOG_LEVEL=error
     image: temporalio/auto-setup:1.18.5
     labels:
       kompose.volume.type: configMap
@@ -130,12 +143,15 @@ services:
       - 7233:7233
     volumes:
       - ./packages/backend-lib/temporal-dynamicconfig:/etc/temporal/config/dynamicconfig
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   temporal-ui:
     profiles: ["temporal-ui"]
     container_name: temporal-ui
     restart: always
-    logging:
-      driver: "local"
     depends_on:
       - temporal
     environment:
@@ -146,6 +162,11 @@ services:
       - dittofeed-network-dev
     ports:
       - 8080:8080
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   postgres:
     image: "postgres:15"
     restart: always
@@ -173,7 +194,7 @@ services:
       - |
         set -ex
         /usr/local/bin/supervisord -d
-        
+
         # Create Redpanda configuration with SASL
         cat > /etc/redpanda/redpanda.yaml <<EOF
         redpanda:
@@ -206,7 +227,7 @@ services:
               port: 9644
           superusers:
             - admin
-        
+
         pandaproxy:
           pandaproxy_api:
             - address: 0.0.0.0
@@ -222,7 +243,7 @@ services:
             - address: localhost
               port: 18082
               name: external
-        
+
         schema_registry:
           schema_registry_api:
             - address: 0.0.0.0
@@ -231,7 +252,7 @@ services:
             - address: 0.0.0.0
               port: 18081
               name: external
-        
+
         rpk:
           kafka_api:
             brokers:
@@ -242,7 +263,7 @@ services:
               - kafka:9644
               - localhost:19644
         EOF
-        
+
         # Start Redpanda
         exec /usr/bin/rpk redpanda start \
           --advertise-kafka-addr internal://kafka:29092,external://localhost:9092 \
@@ -251,12 +272,16 @@ services:
           --smp 1 \
           --memory 1G \
           --mode dev-container \
-          --default-log-level=debug
+          --default-log-level=error
     volumes:
       - kafka:/var/lib/redpanda/data
     networks:
       - dittofeed-network-dev
-  
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   kafka-setup:
     image: redpandadata/redpanda:v23.1.1
     profiles: ["kafka"]
@@ -269,16 +294,18 @@ services:
         set -ex
         # Wait for Redpanda to be ready
         timeout 60 bash -c 'until rpk cluster info --brokers kafka:29092; do sleep 1; done'
-        
+
         # Create admin user
         rpk acl user create admin --password password --mechanism SCRAM-SHA-256 --brokers kafka:29092 --api-urls http://kafka:9644
-        
+
         # Set superusers (this enables authorization)
         rpk cluster config set superusers '["admin"]' --brokers kafka:29092 --api-urls http://kafka:9644
     networks:
       - dittofeed-network-dev
   clickhouse-server:
     image: clickhouse/clickhouse-server:24.12.6.70-alpine
+    depends_on:
+      - blob-storage-init
     ports:
       - "8123:8123"
       - "9000:9000"
@@ -291,6 +318,11 @@ services:
       - clickhouse_log:/var/log/clickhouse-server
     networks:
       - dittofeed-network-dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     profiles: ["otel"]
@@ -325,6 +357,11 @@ services:
       - grafana-storage:/var/lib/grafana
     networks:
       - dittofeed-network-dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   prometheus:
     image: prom/prometheus
     profiles: ["otel"]
@@ -357,7 +394,53 @@ services:
     command: server --console-address ":9001" /data
     networks:
       - dittofeed-network-dev
-
+  blob-storage-init:
+    image: minio/mc
+    depends_on:
+      - blob-storage
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://blob-storage:9000 admin password; do
+        sleep 2;
+      done;
+      mc mb -p local/dittofeed || true;
+      mc anonymous set download local/dittofeed || true;
+      echo 'MinIO bucket dittofeed ready';
+      "
+    networks:
+      - dittofeed-network-dev
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx
+    depends_on:
+      - dashboard
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    profiles: ["apps"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/html:/var/www/certbot
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    networks:
+      - dittofeed-network-dev
+    restart: always
+  certbot:
+    image: certbot/certbot
+    profiles: ["apps"]
+    volumes:
+      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/html:/var/www/certbot
+      - ./nginx/certbot.sh:/certbot.sh
+    entrypoint: ["/bin/sh", "/certbot.sh"]
+    depends_on:
+      - nginx
+    networks:
+      - dittofeed-network-dev
+    restart: always
 volumes:
   postgres:
   kafka:
