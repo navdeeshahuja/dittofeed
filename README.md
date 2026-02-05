@@ -20,6 +20,7 @@ This fork of dittofeed sets up NGINX on port 80 & 443. It handles the SSL Certs 
 6) Run `sudo mkdir -p nginx/certs/live/yourdomain.com`
 7) NGINX on first boot needs dummy certs. Create dummy certs.
 ```
+# FOCUS. YOU NEED TO ADD DOMAIN IN THIS COMMAND
 sudo openssl req -x509 -nodes -newkey rsa:2048 \
   -days 1 \
   -keyout nginx/certs/live/yourdomain.com/privkey.pem \
