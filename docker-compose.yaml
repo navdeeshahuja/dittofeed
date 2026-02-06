@@ -68,15 +68,18 @@ services:
       context: .
       dockerfile: ./packages/worker/Dockerfile
     profiles: ["apps", "apps-dashboard", "apps-api"]
+    command: >
+      sh -c "
+      until nc -z temporal 7233;
+      do echo 'Waiting for Temporal...'; sleep 3; done;
+      exec \"$@\"
+      "
     volumes:
       - ./mnt:/dittofeed-mnt
     depends_on:
-      postgres
-        condition: service_healthy
-      temporal
-        condition: service_healthy
-      clickhouse-server
-        condition: service_healthy
+      - postgres
+      - temporal
+      - clickhouse-server
     environment:
       <<: *backend-app-env
     networks:
