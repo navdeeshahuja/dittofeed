@@ -12,20 +12,29 @@
 Fork: https://github.com/dittofeed/dittofeed
 
 This fork of dittofeed sets up NGINX on port 80 & 443. It handles the SSL Certs also. Just follow these steps:
-1) `git clone https://github.com/navdeeshahuja/dittofeed.git`
-2) `cd dittofeed`
-3) Run `htpasswd -c nginx/.htpasswd admin #password`. Enter password. This will be used as NGINX BASIC auth.
-4) Edit `certbot.sh` <-- Add your domain (&& EMAILID) that you want this to be hosted on
-5) Edit `nginx/nginx-https-port443.conf` <-- Add your domain
-- Next Command Will take a lot of time if you are running this first time - alot and a alot of time
-6) Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
-7) Dittofeed needs to setup your org
+###### CLONE THE REPO
+`git clone https://github.com/navdeeshahuja/dittofeed.git`
+###### GO INSIDE THE REPO
+`cd dittofeed`
+###### SET THE DOMAIN FIRST
+- AUTOMATED WAY 🎉
+  - Run command `./set-domain.sh yourdomain.com you@yourdomain.com`
+- MANUAL WAY
+  - Edit `certbot.sh` <-- Add your domain (&& EMAILID) that you want this to be hosted on
+  - Edit `nginx/nginx-https-port443.conf` <-- Add your domain
+###### SET THE BASIC AUTH ON NGINX
+Run `htpasswd -c nginx/.htpasswd admin #password`. Enter password. This will be used as NGINX BASIC auth.
+###### RUN THE DOCKER INSTANCE
+This Command Will take a lot of time if you are running this first time - alot and a alot of time
+Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
+###### BOOTSTRAP DITTOFEED
+This will set up the workspace and other basic settings for you
 ```
 sudo docker compose run --rm admin-cli bash
  > ./admin.sh bootstrap
 ```
-10) `Go to yourdomain.com and see the magic 🚀`
-
+###### GO TO YOUR DOMAIN
+`Go to yourdomain.com and see the magic 🚀`
 
 ---
 
