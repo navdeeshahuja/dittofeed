@@ -443,6 +443,7 @@ services:
     profiles: ["apps"]
     volumes:
       - ./nginx/nginx-https-port443.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
       - ./certbot-www:/var/www/certbot
       - ./letsencrypt:/etc/letsencrypt
     entrypoint: >
