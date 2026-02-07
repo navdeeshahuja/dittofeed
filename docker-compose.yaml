@@ -447,6 +447,10 @@ services:
       - ./letsencrypt:/etc/letsencrypt
     entrypoint: >
       sh -c "
+        echo "Installing inotify-tools..."
+        apk add --no-cache inotify-tools >/dev/null 2>&1
+        echo "Installation Success - inotify-tools"
+
         echo 'Waiting for certificates to exist...';
         while true; do
           if find /etc/letsencrypt/live -type f -name fullchain.pem 2>/dev/null | grep -q . && \
@@ -459,6 +463,10 @@ services:
         done;
         echo 'Certificates found, starting nginx HTTPS';
         nginx -g 'daemon off;'
+        while inotifywait -e create,modify /etc/letsencrypt/.reload-nginx; do
+          echo "Certificates updated, reloading nginx"
+          nginx -s reload
+        done
       "
     depends_on:
       - certbot

@@ -52,7 +52,8 @@ while :; do
       --email "$EMAIL" \
       --agree-tos \
       --no-eff-email \
-      -d "$DOMAIN"
+      -d "$DOMAIN" \
+      --deploy-hook 'touch /etc/letsencrypt/.reload-nginx';
   fi
 
   echo "⏳ Sleeping for 12 hours"
