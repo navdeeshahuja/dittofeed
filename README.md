@@ -15,22 +15,11 @@ This fork of dittofeed sets up NGINX on port 80 & 443. It handles the SSL Certs 
 1) `git clone https://github.com/navdeeshahuja/dittofeed.git`
 2) `cd dittofeed`
 3) Run `htpasswd -c nginx/.htpasswd admin #password`. Enter password. This will be used as NGINX BASIC auth.
-4) Edit `nginx/certbot.sh` <-- Add your domain (&& EMAILID) that you want this to be hosted on
-5) Edit `nginx/conf.d/default.conf` <-- Add your domain
-6) Run `sudo mkdir -p nginx/certs/live/yourdomain.com`
-7) NGINX on first boot needs dummy certs. Create dummy certs.
-```
-# FOCUS. YOU NEED TO ADD DOMAIN IN THIS COMMAND
-sudo openssl req -x509 -nodes -newkey rsa:2048 \
-  -days 1 \
-  -keyout nginx/certs/live/yourdomain.com/privkey.pem \
-  -out nginx/certs/live/yourdomain.com/fullchain.pem \
-  -subj "/CN=localhost"
-
-```
+4) Edit `certbot.sh` <-- Add your domain (&& EMAILID) that you want this to be hosted on
+5) Edit `nginx/nginx-https-port443.conf` <-- Add your domain
 - Next Command Will take a lot of time if you are running this first time - alot and a alot of time
-8) Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
-9) Dittofeed needs to setup your org
+6) Run `docker compose --profile apps --profile kafka --profile temporal-ui --profile otel up -d` optionally add `--force-recreate`
+7) Dittofeed needs to setup your org
 ```
 sudo docker compose run --rm admin-cli bash
  > ./admin.sh bootstrap
@@ -98,7 +87,7 @@ For the full dashboard experience, play around with the [demo app](https://demo.
 
 ## Docker Deployment
 
-Check out our [walkthrough video](https://youtu.be/kZbDvVCylVg?si=Gt7xbcQ-_hk6fqKt) for an end-to-end tutorial on deploying with docker compose and automating your first message. Accompanying documentation can be found [here](https://docs.dittofeed.com/deployment/self-hosted/docker-compose).  
+Check out our [walkthrough video](https://youtu.be/kZbDvVCylVg?si=Gt7xbcQ-_hk6fqKt) for an end-to-end tutorial on deploying with docker compose and automating your first message. Accompanying documentation can be found [here](https://docs.dittofeed.com/deployment/self-hosted/docker-compose).
 
 ## Quick Deployment
 

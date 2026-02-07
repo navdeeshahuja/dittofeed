@@ -423,35 +423,58 @@ services:
       "
     networks:
       - dittofeed-network-dev
-  nginx:
+  nginx-http-port80:
     image: nginx:1.25-alpine
-    container_name: nginx
-    depends_on:
-      - dashboard
-      - api
+    container_name: nginx-http-port80
     ports:
       - "80:80"
+    profiles: ["apps"]
+    volumes:
+      - ./nginx/nginx-http-port80.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot-www:/var/www/certbot
+    networks:
+      - dittofeed-network-dev
+    restart: always
+  nginx-https-port443:
+    image: nginx:1.25-alpine
+    container_name: nginx-https-port443
+    ports:
       - "443:443"
     profiles: ["apps"]
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/certs:/etc/letsencrypt
-      - ./nginx/html:/var/www/certbot
-      - ./nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ./nginx/nginx-https-port443.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot-www:/var/www/certbot
+      - ./letsencrypt:/etc/letsencrypt
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for certificates to exist...';
+        while true; do
+          if find /etc/letsencrypt/live -type f -name fullchain.pem 2>/dev/null | grep -q . && \
+             find /etc/letsencrypt/live -type f -name privkey.pem 2>/dev/null | grep -q .; then
+            break;
+          fi;
+          echo 'Certificates not found...';
+          echo 'Will try to start again after 2s'
+          sleep 2;
+        done;
+        echo 'Certificates found, starting nginx HTTPS';
+        nginx -g 'daemon off;'
+      "
+    depends_on:
+      - certbot
     networks:
       - dittofeed-network-dev
     restart: always
   certbot:
     image: certbot/certbot
-    profiles: ["apps"]
+    profiles: ["apps", "appsnginx"]
     volumes:
-      - ./nginx/certs:/etc/letsencrypt
-      - ./nginx/html:/var/www/certbot
-      - ./nginx/certbot.sh:/certbot.sh
+      - ./certbot-www:/var/www/certbot
+      - ./letsencrypt:/etc/letsencrypt
+      - ./certbot.sh:/certbot.sh
     entrypoint: ["/bin/sh", "/certbot.sh"]
     depends_on:
-      - nginx
+      - nginx-http-port80
     networks:
       - dittofeed-network-dev
     restart: always
