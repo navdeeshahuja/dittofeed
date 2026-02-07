@@ -447,9 +447,9 @@ services:
       - ./letsencrypt:/etc/letsencrypt
     entrypoint: >
       sh -c "
-        echo "Installing inotify-tools..."
+        echo 'Installing inotify-tools...'
         apk add --no-cache inotify-tools >/dev/null 2>&1
-        echo "Installation Success - inotify-tools"
+        echo 'Installation Success - inotify-tools'
 
         echo 'Waiting for certificates to exist...';
         while true; do
