@@ -453,8 +453,8 @@ services:
 
         echo 'Waiting for certificates to exist...';
         while true; do
-          if find /etc/letsencrypt/live -type f -name fullchain.pem 2>/dev/null | grep -q . && \
-             find /etc/letsencrypt/live -type f -name privkey.pem 2>/dev/null | grep -q .; then
+          if find /etc/letsencrypt/live -name fullchain.pem 2>/dev/null | grep -q . && \
+             find /etc/letsencrypt/live -name privkey.pem 2>/dev/null | grep -q .; then
             break;
           fi;
           echo 'Certificates not found...';
